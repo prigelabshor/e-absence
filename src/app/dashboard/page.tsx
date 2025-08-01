@@ -50,7 +50,8 @@ export default function DashboardPage() {
     setIsLoading(true);
     getClasses(institution)
       .then(data => {
-        setClasses(data);
+        const sortedData = data.sort((a, b) => a.name.localeCompare(b.name));
+        setClasses(sortedData);
         setIsLoading(false);
       })
       .catch(error => {
@@ -140,4 +141,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
