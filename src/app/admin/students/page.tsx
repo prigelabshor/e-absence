@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -57,11 +56,11 @@ export default function StudentsPage() {
         addDesc: "Isi detail untuk siswa baru.",
         classLabel: "Kelas",
         importTitle: "Impor Data Siswa",
-        importDesc: "Unggah file Excel (.xlsx) dengan kolom yang sesuai.",
+        importDesc: "Unggah file Excel (.xlsx) dengan kolom 'name', 'classId', dan 'dormitory' (opsional).",
         importSuccess: "siswa berhasil diimpor.",
         classIdNotFound: "Class ID tidak ditemukan.",
-        searchPlaceholder: "Cari nama siswa atau kelas...",
-        noSearchResult: "Tidak ada siswa atau kelas yang ditemukan."
+        searchStudentPlaceholder: "Cari siswa...",
+        searchClassPlaceholder: "Filter kelas...",
       } 
     : {
         title: "Kelola Santri",
@@ -78,13 +77,12 @@ export default function StudentsPage() {
         addDesc: "Isi detail untuk santri baru.",
         classLabel: "Halaqah",
         importTitle: "Impor Data Santri",
-        importDesc: "Unggah file Excel (.xlsx) dengan kolom yang sesuai.",
+        importDesc: "Unggah file Excel (.xlsx) dengan kolom 'name', 'classId', dan 'dormitory'.",
         importSuccess: "santri berhasil diimpor.",
         classIdNotFound: "Halaqah ID tidak ditemukan.",
-        searchPlaceholder: "Cari nama santri atau halaqah...",
-        noSearchResult: "Tidak ada santri atau halaqah yang ditemukan."
+        searchStudentPlaceholder: "Cari santri...",
+        searchClassPlaceholder: "Filter halaqah...",
       };
-
 
   const [students, setStudents] = useState<Student[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
@@ -93,7 +91,8 @@ export default function StudentsPage() {
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [studentSearch, setStudentSearch] = useState("");
+  const [classSearch, setClassSearch] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -107,8 +106,7 @@ export default function StudentsPage() {
                 getDormitories(institution)
             ]);
             setStudents(studentsData);
-            const sortedClasses = classesData.sort((a,b) => a.name.localeCompare(b.name));
-            setClasses(sortedClasses);
+            setClasses(classesData);
             setDormitories(dormitoriesData);
         } catch(error) {
             console.error(error);
@@ -120,37 +118,13 @@ export default function StudentsPage() {
     fetchData();
   }, [institution, toast]);
 
-  const filteredClasses = useMemo(() => {
-    if (!searchTerm) {
-      return classes.map(c => ({
-        ...c,
-        students: students.filter(s => s.classId === c.id)
-      })).filter(c => c.students.length > 0);
-    }
-    
-    const lowercasedSearchTerm = searchTerm.toLowerCase();
+  const filteredClasses = classes.filter(c => 
+    c.name.toLowerCase().includes(classSearch.toLowerCase())
+  );
 
-    return classes.map(c => {
-      const classNameMatches = c.name.toLowerCase().includes(lowercasedSearchTerm);
-      
-      const matchingStudents = students.filter(s => 
-        s.classId === c.id && s.name.toLowerCase().includes(lowercasedSearchTerm)
-      );
-
-      // If class name matches, show all students in that class.
-      // Otherwise, show only the students that match the search term.
-      const studentsToShow = classNameMatches
-        ? students.filter(s => s.classId === c.id)
-        : matchingStudents;
-
-      return {
-        ...c,
-        students: studentsToShow,
-      };
-    }).filter(c => c.students.length > 0);
-
-  }, [students, classes, searchTerm]);
-
+  const filteredStudents = students.filter(s => 
+    s.name.toLowerCase().includes(studentSearch.toLowerCase())
+  );
 
   const handleEdit = (student: Student) => {
     setEditingStudent(student);
@@ -267,46 +241,47 @@ export default function StudentsPage() {
     if (classes.length === 0) {
         return <p className="text-center py-12">Silakan tambahkan data {I18N.classLabel.toLowerCase()} terlebih dahulu di halaman Kelola {I18N.classLabel}.</p>
     }
-    
-    if (filteredClasses.length === 0) {
-        return <p className="text-center py-12">{I18N.noSearchResult}</p>
-    }
 
     return (
-        filteredClasses.map(c => (
+        filteredClasses.map(c => {
+          const classStudents = filteredStudents.filter(s => s.classId === c.id);
+          if (classStudents.length === 0) return null;
+          
+          return (
             <div key={c.id} className="mb-6">
-            <h3 className="text-lg font-semibold mb-2">{c.name}</h3>
-                <div className="rounded-md border">
+              <h3 className="text-lg font-semibold mb-2">{c.name}</h3>
+              <div className="rounded-md border">
                 <Table>
-                    <TableHeader>
+                  <TableHeader>
                     <TableRow>
-                        <TableHead>{I18N.idCol}</TableHead>
-                        <TableHead>{I18N.nameCol}</TableHead>
-                        <TableHead>{I18N.dormCol}</TableHead>
-                        <TableHead className="text-right w-[120px]">Aksi</TableHead>
+                      <TableHead>{I18N.idCol}</TableHead>
+                      <TableHead>{I18N.nameCol}</TableHead>
+                      <TableHead>{I18N.dormCol}</TableHead>
+                      <TableHead className="text-right w-[120px]">Aksi</TableHead>
                     </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {c.students.map((student) => (
-                        <TableRow key={student.id}>
-                        <TableCell className="font-medium">{student.id}</TableCell>
+                  </TableHeader>
+                  <TableBody>
+                    {classStudents.map((student) => (
+                      <TableRow key={student.id}>
+                        <TableCell className="font-medium truncate max-w-[100px]">{student.id}</TableCell>
                         <TableCell>{student.name}</TableCell>
                         <TableCell>{student.dormitory || '-'}</TableCell>
                         <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(student)}>
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(student)}>
                             <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(student.id)}>
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(student.id)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                          </Button>
                         </TableCell>
-                        </TableRow>
+                      </TableRow>
                     ))}
-                    </TableBody>
+                  </TableBody>
                 </Table>
+              </div>
             </div>
-            </div>
-        ))
+          )
+        })
     )
   }
 
@@ -329,26 +304,38 @@ export default function StudentsPage() {
         </div>
       </div>
 
+      {/* Search Bars */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={I18N.searchStudentPlaceholder}
+            className="pl-8"
+            value={studentSearch}
+            onChange={(e) => setStudentSearch(e.target.value)}
+          />
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={I18N.searchClassPlaceholder}
+            className="pl-8"
+            value={classSearch}
+            onChange={(e) => setClassSearch(e.target.value)}
+          />
+        </div>
+      </div>
+
       <Card>
         <CardHeader>
             <CardTitle>{I18N.listTitle}</CardTitle>
             <CardDescription>{I18N.listDesc}</CardDescription>
-            <div className="pt-4">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                        type="search"
-                        placeholder={I18N.searchPlaceholder}
-                        className="pl-9 w-full md:w-[300px]"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        disabled={classes.length === 0}
-                    />
-                </div>
-            </div>
         </CardHeader>
         <CardContent>
            {renderContent()}
+           {filteredClasses.length > 0 && filteredStudents.length === 0 && (
+             <p className="text-center py-4">Tidak ditemukan siswa/santri dengan kriteria pencarian tersebut.</p>
+           )}
         </CardContent>
       </Card>
       
@@ -420,7 +407,7 @@ export default function StudentsPage() {
                 className="col-span-3"
               />
               <p className="text-xs text-muted-foreground">
-                Pastikan baris pertama file Anda adalah header dengan nama kolom: <strong>name</strong>, <strong>classId</strong>, dan <strong>dormitory</strong> (opsional).
+                Pastikan file Anda memiliki header 'name', 'classId', dan 'dormitory' (opsional).
               </p>
           </div>
           <DialogFooter>
@@ -431,5 +418,3 @@ export default function StudentsPage() {
     </div>
   );
 }
-
-    
