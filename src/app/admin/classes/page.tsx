@@ -153,7 +153,7 @@ export default function ClassesPage() {
               ) : (
                 classes.map((c) => (
                     <TableRow key={c.id}>
-                    <TableCell className="font-medium truncate max-w-[100px]">{c.id}</TableCell>
+                    <TableCell className="font-medium">{c.id}</TableCell>
                     <TableCell>{c.name}</TableCell>
                     <TableCell>{c.grade}</TableCell>
                     <TableCell className="text-right">
