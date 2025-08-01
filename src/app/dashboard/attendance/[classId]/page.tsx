@@ -53,7 +53,8 @@ export default function AttendancePage() {
                 getSubjects(institution)
             ]);
             setCurrentClass(classData);
-            setStudentsInClass(studentsData);
+            const sortedStudents = studentsData.sort((a, b) => a.name.localeCompare(b.name));
+            setStudentsInClass(sortedStudents);
             setSubjects(subjectsData);
             if (subjectsData.length > 0) {
                 setSelectedSubject(subjectsData[0].id);
